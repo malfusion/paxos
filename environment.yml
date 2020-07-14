@@ -1,0 +1,4 @@
+name: paxos
+dependencies:
+  - python=3.6
+  - pyyaml
