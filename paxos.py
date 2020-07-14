@@ -67,7 +67,7 @@ class PaxosNode():
     def sync(self, value):
         self.mesgVal = value
         # TO REMOVE
-        # if self.nodeId < 2:
+        # if self.nodeId == 1:
         self.txPerm(self.nodeId)
 
     # Proposer Function
@@ -76,7 +76,7 @@ class PaxosNode():
             self.permAccepts[self.ctr] = {}
         for nodeId in range(self.paxosConfig['nodes']):
             suggId = self.constructSuggId()
-            print("%d -> %d perm %s" %(fromNodeId, nodeId, suggId))
+            print("\033[92m%d -> %d perm %s \033[0m" %(fromNodeId, nodeId, suggId))
             self.comm.sendMesg(self.nodeId, nodeId, self.PermissionMessage(suggId))
     
     # Proposer Function
@@ -84,7 +84,7 @@ class PaxosNode():
         if self.ctr not in self.proposalAccepts:
             self.proposalAccepts[self.ctr] = {}
         for nodeId in range(self.paxosConfig['nodes']):
-            print("%d -> %d proposal %s :: %s" %(fromNodeId, nodeId, suggId, mesgVal))
+            print("\033[92m%d -> %d proposal %s :: %s \033[0m" %(fromNodeId, nodeId, suggId, mesgVal))
             self.comm.sendMesg(self.nodeId, nodeId, {
                 'data': {
                     'type': 'propose',
@@ -97,7 +97,7 @@ class PaxosNode():
     # Proposer Function
     def txAccepted(self, fromNodeId, suggId, mesgVal):
         for nodeId in range(self.paxosConfig['nodes']):
-            print("%d -> %d accepted %s :: %s" %(fromNodeId, nodeId, suggId, mesgVal))
+            print("\033[92m%d -> %d accepted %s :: %s \033[0m" %(fromNodeId, nodeId, suggId, mesgVal))
             self.comm.sendMesg(self.nodeId, nodeId, {
                 'data': {
                     'type': 'accepted',
@@ -168,7 +168,7 @@ class PaxosNode():
     def rxPerm(self, fromNodeId, toNodeId, suggId):
         print("%d <- %d perm %s" %(toNodeId, fromNodeId, suggId))
         if self.lastPromised == None or suggId >= self.lastPromised:
-            print("%d -> %d perm_accept %s" %(fromNodeId, toNodeId, suggId))
+            print("\033[92m%d -> %d perm_accept %s \033[0m" %(toNodeId, fromNodeId, suggId))
             self.lastPromised = suggId
             self.comm.sendMesg(self.nodeId, fromNodeId, {
                 'data': {
@@ -181,7 +181,7 @@ class PaxosNode():
                 'protocol': 'paxos'
             })
         else:
-            print("%d -> %d perm_deny %s" %(fromNodeId, toNodeId, suggId))
+            print("\033[92m%d -> %d perm_deny %s \033[0m" %(fromNodeId, toNodeId, suggId))
             self.comm.sendMesg(self.nodeId, fromNodeId, {
                 'data': {
                     'type': 'permission_deny',
@@ -199,7 +199,7 @@ class PaxosNode():
             # print("Node %d Recieved Proposal. Accepted %s > %s and > %s from Node %d" %(toNodeId, suggId, self.lastPromised, self.lastAccepted, fromNodeId))
             self.lastAccepted = suggId
             self.lastAcceptedValue = mesgVal
-            print("%d -> %d proposal_accept %s" %(fromNodeId, toNodeId, suggId))
+            print("\033[92m%d -> %d proposal_accept %s \033[0m" %(toNodeId, fromNodeId, suggId))
             self.comm.sendMesg(self.nodeId, fromNodeId, {
                 'data': {
                     'type': 'proposal_accept',
@@ -212,7 +212,7 @@ class PaxosNode():
                 'protocol': 'paxos'
             })
         else:
-            print("%d -> %d proposal_deny %s" %(fromNodeId, toNodeId, suggId))
+            print("\033[92m%d -> %d proposal_deny %s \033[0m" %(fromNodeId, toNodeId, suggId))
             self.comm.sendMesg(self.nodeId, fromNodeId, {
                 'data': {
                     'type': 'proposal_deny',
@@ -225,6 +225,17 @@ class PaxosNode():
             })
             
     def rxAccepted(self, fromNodeId, toNodeId, suggId, mesgVal):
-        print("%d CONSENSUS %s :: %s" %(toNodeId, suggId, mesgVal))
+        print("\033[92m%d CONSENSUS %s :: %s \033[0m" %(toNodeId, suggId, mesgVal))
         self.consensusValue = mesgVal;
     
+
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
