@@ -1,4 +1,6 @@
 import threading
+import time
+import random
 
 class Paxos:
     def __init__(self, paxosNodes):
@@ -11,6 +13,7 @@ class PaxosNode():
         self.paxosConfig = paxosConfig
         self.nodeId = nodeId
         self.comm = comm
+        self.consensusValue = None
 
         #Proposer
         self.mesgVal = None
@@ -23,6 +26,8 @@ class PaxosNode():
         self.lastAccepted = None
         self.lastAcceptedValue = None
         
+    def hasReachedConsensus(self):
+        return self.consensusValue != None
 
     def processMesg(self, mesg):
         meta = mesg['metadata']
@@ -40,6 +45,9 @@ class PaxosNode():
             self.rxProposalAccept(meta['from'], meta['to'], data['suggestionId'])
         if data['type'] == 'proposal_deny':
             self.rxProposalDeny(meta['from'], meta['to'], data['suggestionId'], data['last_promised'], data['last_accepted'], data['last_accepted_value'])
+
+        if data['type'] == 'accepted':
+            self.rxAccepted(meta['from'], meta['to'], data['suggestionId'], data['value'])
         
         
     def PermissionMessage(self, suggId):
@@ -59,8 +67,8 @@ class PaxosNode():
     def sync(self, value):
         self.mesgVal = value
         # TO REMOVE
-        if self.nodeId < 2:
-            self.txPerm(self.nodeId)
+        # if self.nodeId < 2:
+        self.txPerm(self.nodeId)
 
     # Proposer Function
     def txPerm(self, fromNodeId):
@@ -86,19 +94,29 @@ class PaxosNode():
                 'protocol': 'paxos'
             })
 
+    # Proposer Function
+    def txAccepted(self, fromNodeId, suggId, mesgVal):
+        for nodeId in range(self.paxosConfig['nodes']):
+            print("%d -> %d accepted %s :: %s" %(fromNodeId, nodeId, suggId, mesgVal))
+            self.comm.sendMesg(self.nodeId, nodeId, {
+                'data': {
+                    'type': 'accepted',
+                    'suggestionId': suggId,
+                    'value': mesgVal
+                },
+                'protocol': 'paxos'
+            })
+
 
 
     # Proposer Function
     def rxPermAccept(self, fromNodeId, toNodeId, suggId):
         print("%d <- %d perm_accept %s" %(toNodeId, fromNodeId, suggId))
         suggIdCtr = int(suggId.strip('<').strip('>').split(',')[0])
-        self.permAccepts[suggIdCtr][fromNodeId] = {
-            'suggestionId': suggId
-        }
+        self.permAccepts[suggIdCtr][fromNodeId] = True
         if suggIdCtr == self.ctr and len(self.permAccepts[suggIdCtr].keys()) == (self.paxosConfig['nodes']//2):
             print("%d: PERM ACCEPTED MAJORIY %s" %(self.nodeId, suggId))
-            # TODO: We'll need more checks for the overridden mesgVal in case it happens
-            self.txProposal(fromNodeId, suggId, self.mesgVal)
+            self.txProposal(self.nodeId, suggId, self.mesgVal)
 
 
 
@@ -106,11 +124,12 @@ class PaxosNode():
     def rxPermDeny(self, fromNodeId, toNodeId, suggId, lastPromised, lastAccepted, lastAcceptedVal):
         print("%d <- %d perm_deny %s" %(toNodeId, fromNodeId, suggId))
         suggIdCtr = int(lastPromised.strip('<').strip('>').split(',')[0])
-        if suggIdCtr > self.ctr:
+        if suggIdCtr >= self.ctr:
             self.ctr = suggIdCtr + 1
             print("Node %d Retrying Perm" %(self.nodeId))
             if lastAcceptedVal != None:
                 self.mesgVal = lastAcceptedVal
+            # time.sleep(2*random.random())
             self.txPerm(self.nodeId)
 
 
@@ -119,12 +138,11 @@ class PaxosNode():
     def rxProposalAccept(self, fromNodeId, toNodeId, suggId):
         print("%d <- %d proposal_accept %s" %(toNodeId, fromNodeId, suggId))
         suggIdCtr = int(suggId.strip('<').strip('>').split(',')[0])
-        self.proposalAccepts[suggIdCtr][fromNodeId] = {
-            'suggestionId': suggId
-        }
+        self.proposalAccepts[suggIdCtr][fromNodeId] = True
         if suggIdCtr == self.ctr:
             if len(self.proposalAccepts[suggIdCtr].keys()) == (self.paxosConfig['nodes']//2):
                 print("%d: PROPOSAL ACCEPTED MAJORIY %s" %(self.nodeId, suggId))
+                self.txAccepted(self.nodeId, suggId, self.mesgVal)
             
     
     
@@ -136,9 +154,9 @@ class PaxosNode():
         lastAcceptedCtr = int(lastAccepted.strip('<').strip('>').split(',')[0]) if lastAccepted != None else -1
         biggestCtr = max(lastPromisedCtr, lastAcceptedCtr)
         
-        if biggestCtr > self.ctr:
+        if biggestCtr >= self.ctr:
             self.ctr = biggestCtr + 1
-            print("%d - Retrying Perm" %(self.nodeId))
+            print("%d - Retrying Perm (from proposal)" %(self.nodeId))
             if lastAcceptedVal != None:
                 self.mesgVal = lastAcceptedVal
             self.txPerm(self.nodeId)
@@ -149,7 +167,7 @@ class PaxosNode():
     # Acceptor Function
     def rxPerm(self, fromNodeId, toNodeId, suggId):
         print("%d <- %d perm %s" %(toNodeId, fromNodeId, suggId))
-        if self.lastPromised == None or suggId > self.lastPromised:
+        if self.lastPromised == None or suggId >= self.lastPromised:
             print("%d -> %d perm_accept %s" %(fromNodeId, toNodeId, suggId))
             self.lastPromised = suggId
             self.comm.sendMesg(self.nodeId, fromNodeId, {
@@ -206,4 +224,7 @@ class PaxosNode():
                 'protocol': 'paxos'
             })
             
+    def rxAccepted(self, fromNodeId, toNodeId, suggId, mesgVal):
+        print("%d CONSENSUS %s :: %s" %(toNodeId, suggId, mesgVal))
+        self.consensusValue = mesgVal;
     

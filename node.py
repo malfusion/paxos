@@ -24,10 +24,11 @@ class Node(Thread):
 
     def run(self):
         print("I am thread", self.id)
-        time.sleep(1)
+        time.sleep(0.1)
         mesgs = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
         self.paxosNode.sync(mesgs[self.id])
-        while(self.active):
+        
+        while not self.paxosNode.hasReachedConsensus():
             if len(self.inbox):
                 self.processMesg(self.inbox.popleft())
 
