@@ -7,6 +7,7 @@ class Paxos:
     def __init__(self, paxosNodes):
         self.nodes = paxosNodes
 
+# TODO: Gets sstuck at round 10 because of character based comparison.
 
 
 class PaxosNode():
@@ -137,7 +138,7 @@ class PaxosNode():
             print("\033[91mNode %d Retrying Perm \033[0m" %(self.nodeId))
             if lastAcceptedVal != None:
                 self.mesgVal = lastAcceptedVal
-            self.txPermDelayed(self.nodeId, 0.01*random.random())
+            self.txPermDelayed(self.nodeId, 0.2*random.random())
             
 
 
@@ -167,7 +168,7 @@ class PaxosNode():
             print("\033[91m%d - Retrying Perm (from proposal) \033[0m" %(self.nodeId))
             if lastAcceptedVal != None:
                 self.mesgVal = lastAcceptedVal
-            self.txPermDelayed(self.nodeId, 0.01*random.random())
+            self.txPermDelayed(self.nodeId, 0.2*random.random())
         
 
     

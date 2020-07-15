@@ -24,7 +24,7 @@ class Node(Thread):
 
     def run(self):
         time.sleep(0.1)
-        mesgs = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+        mesgs = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten+zero', 'ten+one', 'ten+two', 'ten+three', 'ten+four', 'ten+five', 'ten+six', 'ten+seven', 'ten+eight', 'ten+nine', 'ten+ten']
         self.paxosNode.sync(mesgs[self.id])
         
         while not self.paxosNode.hasReachedConsensus():
