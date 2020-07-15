@@ -23,7 +23,6 @@ class Node(Thread):
         return self.id
 
     def run(self):
-        print("I am thread", self.id)
         time.sleep(0.1)
         mesgs = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
         self.paxosNode.sync(mesgs[self.id])
